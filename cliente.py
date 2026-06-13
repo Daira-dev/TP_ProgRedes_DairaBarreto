@@ -2,20 +2,42 @@ import socket # Red
 
 def iniciar_cliente():
     cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Creo el socket
-    cliente.connect(('localhost', 5050)) # IP + Puerto para conectar con el servidor
+    cliente.connect(("localhost", 5050)) # IP + Puerto para conectar con el servidor
     
-    print("[CONECTADO] Escribe mensajes (di 'salir' para terminar)")
+    print("[CONECTADO] Inicia sesión para continuar.\n")
 
+    # Loop de login
     while True:
-        mensaje = input("> ") # Pido el mensaje del usuario
-        if mensaje.lower() == 'salir':
+        usuario = input("Usuario: ")
+        clave = input("Contraseña: ")
+
+        cliente.send(usuario.encode("utf-8")) # Envio al servidor
+        cliente.send(clave.encode("utf-8")) # Envio al servidor
+
+        respuesta = cliente.recv(1024).decode("utf-8") # Recibo respuesta del servidor       
+
+        # Login normal
+        if respuesta == "LOGUEADO": 
+            print("\n[ACCESO CONCEDIDO] Bienvenido al sistema.\n")
             break
-            
-        cliente.send(mensaje.encode('utf-8'))  # Envio mensaje al servidor
-        respuesta = cliente.recv(1024).decode('utf-8') # Recibo respuesta del servidor       
-        print(f"Servidor: {respuesta}")
+
+        print("\n[ACCESO DENEGADO] Usuario o contraseña incorrectos.\n")
+        continue
+
+    # Chat del cliente
+    while True:
+        mensaje = input("> ")
+
+        if mensaje.lower() == "salir":
+            break
+
+        cliente.send(mensaje.encode("utf-8"))
+        respuesta = cliente.recv(1024).decode("utf-8")
+
+        print( respuesta)
 
     cliente.close()
+
 
 if __name__ == "__main__":
     iniciar_cliente()

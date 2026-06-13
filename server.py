@@ -1,67 +1,59 @@
-import socket # Red
+import socket # Red 
 import threading # Concurrencia
+import database
 
 # Inicio del servidor
 def iniciar_servidor():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Creo socket
     puerto = 5050
-    server.bind(('localhost', puerto)) # Defino IP + Puerto
+    server.bind(("localhost", puerto)) # Defino IP + Puerto
     server.listen() # Servidor en escucha
     
-    print("[INICIO] Servidor escuchando en el puerto {puerto}...")
-
-    clientes_activos = []
-    print("[INICIO] Servidor escuchando en el puerto 5050...")
+    print("[INICIO] Servidor en escucha.")
 
     while True:
         conn, addr = server.accept() # Espero la conexión de un cliente
-        clientes_activos.append(conn)
         
-        # Crear hilo para el nuevo cliente
-        hilo = threading.Thread(target=manejar_cliente, args=(conn, addr, clientes_activos))
+        # Creo hulo para el nuevo cliente  
+        hilo = threading.Thread(target=manejar_cliente, args=(conn, addr))
         hilo.start()
-        
-        print(f"[CLIENTES ACTIVOS] {len(clientes_activos)}")
-
 
 # Comunicación con el cliente
-def manejar_cliente(conn, addr, clientes_activos):
-    print(f"\n[NUEVA CONEXIÓN] {addr} conectado.")
+def manejar_cliente(conn, addr):
+    print(f"[NUEVA CONEXIÓN] {addr}.")
 
-    # Solicito usuario
-    conn.send("USUARIO".encode('utf-8'))
-    usuario = conn.recv(1024).decode('utf-8')
+    # Recibo datos del cliente
+    usuario = conn.recv(1024).decode("utf-8")
+    clave = conn.recv(1024).decode("utf-8")
 
-    # Solicito contraseña
-    conn.send("CONTRASEÑA".encode('utf-8'))
-    passw = conn.recv(1024).decode('utf-8')
+    print(f"Intento de ingreso: {usuario}")
 
-    if validar_usuario(usuario, passw):
-        conn.send("LOGUEADO".encode('utf-8'))
-        conectado = True
-        print(f'[USUARIO LOGUEADO] {usuario}')
+    # Verifico usuario y contraseña
+    if database.validar_usuario(usuario, clave):
+        conn.send("LOGUEADO".encode("utf-8"))
+        print(f"[INGRESO DE USUARIO] El usuario '{usuario}' ingresó al sistema.")
+    
+    # Si la contraseña o usuario no coinciden / no existen
     else:
-        conn.send("ERROR DE LOGUEO".encode('utf-8'))
-        conectado = False
-        print(f'[ERROR AL INGRESAR] {usuario}')
-        conn.close()
-        return
+        conn.send("NO_LOGUEADO".encode("utf-8"))
+        print(f"Error de ingreso: {usuario}")
 
-    while conectado:
-        mensaje = conn.recv(1024).decode('utf-8') #  Recibo el mensaje del cliente 
+    # Envío de mensajes
+    try:
+        while True:
+            mensaje = conn.recv(1024).decode("utf-8")
 
-        if not mensaje:
-            print("Cliente desconectado.")
-            break
+            if not mensaje:
+                break
 
-        print(f'{usuario}: {mensaje}')
+            print(f"{usuario}: {mensaje}")
 
-        conn.send(f'{mensaje}'.encode('utf-8')) # Respondo al cliente
+            conn.send(f"{mensaje}".encode("utf-8")) # Respondo al cliente
      
-    conn.close()
+    except ConnectionResetError:
+        print(f"[DESCONECTADO] {usuario} se ha desconectado.")
 
-def validar_usuario(usuario, password):
-    # Verifica si el usuario y contraseña existen
-    return usuario == 'Daira' and password == "1234"
+    finally:
+        conn.close()
 
 iniciar_servidor()
