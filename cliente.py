@@ -18,7 +18,8 @@ def iniciar_cliente():
 
         # Login normal
         if respuesta == "LOGUEADO": 
-            print("\n[ACCESO CONCEDIDO] Bienvenido al sistema.\n")
+            print("\n[ACCESO CONCEDIDO] Bienvenido al sistema.")
+            print("Para ver comandos puedes usar '/info'.\n")
             break
 
         print("\n[ACCESO DENEGADO] Usuario o contraseña incorrectos.\n")
@@ -28,16 +29,16 @@ def iniciar_cliente():
     while True:
         mensaje = input("> ")
 
-        if mensaje.lower() == "salir":
+        if mensaje.lower() == "/adios":
+            print("[DESCONECTADO] Te has desconectado del servidor.")
             break
 
         cliente.send(mensaje.encode("utf-8"))
         respuesta = cliente.recv(1024).decode("utf-8")
 
-        print( respuesta)
+        print(respuesta)
 
     cliente.close()
-
 
 if __name__ == "__main__":
     iniciar_cliente()
