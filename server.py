@@ -31,22 +31,22 @@ def procesar_comando(mensaje):
         if len(partes) < 2:
             return "Debe indicar un usuario de GitHub (Ej: /repos daira-dev)."
         
-        usuario_github = partes[1]
+        usuario_github = partes[1] 
 
         # Traigo los repositorios de github del usuario
         url = f"https://api.github.com/users/{usuario_github}/repos"
-        respuesta = requests.get(url)
+        respuesta = requests.get(url) # texto en formato JSON
 
         if respuesta.status_code != 200:
             return "Error consultando GitHub o usuario inexistente."
 
-        datos = respuesta.json()
+        datos = respuesta.json() # convertir en estructuras Python
 
         # Traigo los repositorios de la base
         repos_db = database.obtener_repositorios(usuario_github)
         repos_db_set = {r[0] for r in repos_db}  # Solo traigo los nombres + link
 
-        lista = []
+        lista = [] # Para contruir el msj a devolver al cliente
 
         # Proceso los repositorios
         for repo in datos:
@@ -60,17 +60,54 @@ def procesar_comando(mensaje):
                 database.guardar_repositorio(
                     usuario_github,
                     nombre,
-                    url_repo
-                )
-
+                    url_repo)
+                
         return (f"[REPOSITORIOS] {usuario_github}:\n" + "\n".join(lista))
+    
+    if comando == "/followers":
+
+        if len(partes) < 2:
+            return "Debe indicar un usuario de GitHub (Ej: /followers daira-dev)."
+        
+        usuario_github = partes[1]
+
+        # Traigo los followers de GitHub
+        url = f"https://api.github.com/users/{usuario_github}/followers"
+        respuesta = requests.get(url) # texto en formato JSON
+
+        if respuesta.status_code != 200:
+            return "Error consultando GitHub o usuario inexistente."
+
+        datos = respuesta.json() # convertir en estructuras Python
+
+        # Traigo los followers de la base
+        followers_db = database.obtener_followers(usuario_github)
+        followers_db_set = {f[0] for f in followers_db}
+
+        lista = [] # Para contruir el msj a devolver al cliente
+
+        # Proceso los seguidores
+        for follower in datos:
+            seguidor = follower["login"]
+            tipo = follower["type"]
+            url_follower = follower["html_url"]
+
+            lista.append(f"- {seguidor} ({tipo})\t{url_follower}")
+
+            if seguidor not in followers_db_set:
+                database.guardar_follower(
+                    usuario_github, 
+                    seguidor, 
+                    tipo, 
+                    url_follower)
+                
+        return ( f"[FOLLOWERS] {usuario_github}:\n" + "\n".join(lista) )
     
     if comando == "/info":
         return (
             "\nComandos disponibles:"
             "/repos usuario — Obtiene repositorios de GitHub y los guarda en la base de datos\n"
         )
-
 
     return "Comando no reconocido."
 
