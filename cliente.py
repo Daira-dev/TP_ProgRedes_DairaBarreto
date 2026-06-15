@@ -29,14 +29,12 @@ def iniciar_cliente():
     while True:
         mensaje = input("> ")
 
-        if mensaje.lower() == "/adios":
-            print("[DESCONECTADO] Te has desconectado del servidor.")
-            break
-
         cliente.send(mensaje.encode("utf-8"))
         respuesta = cliente.recv(1024).decode("utf-8")
 
         print(respuesta)
+        if mensaje.lower() == "/adios":
+            break
 
     cliente.close()
 

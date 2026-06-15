@@ -2,6 +2,9 @@ import socket # Red
 import threading # Concurrencia
 import database
 import requests
+import datetime
+
+usuarios_conectados = [] # Lista de usuarios que están conectados al sistema
 
 # Inicio del servidor
 def iniciar_servidor():
@@ -103,12 +106,32 @@ def procesar_comando(mensaje):
                 
         return ( f"[FOLLOWERS] {usuario_github}:\n" + "\n".join(lista) )
     
+    if comando == "/hora":
+        hora = datetime.datetime.now().strftime("%H:%M:%S")
+        return f"[HORA] {hora}"
+
+    if comando == "/usuarios":
+
+        lista_usuarios = []
+
+        for usuario in usuarios_conectados:
+            lista_usuarios.append(f"- {usuario}")
+
+        return "[USUARIOS CONECTADOS]\n" + "\n".join(lista_usuarios)
+
     if comando == "/info":
         return (
             "\nComandos disponibles:"
-            "/repos usuario — Obtiene repositorios de GitHub y los guarda en la base de datos\n"
+            "/repos usuario — Obtiene repositorios de GitHub\n"
+            "/followers usuario - Obtiene followers de GitHub\n"
+            "/hora - Muestra la hora actual del servidor\n"
+            "/usuarios - Muestra los usuarios conectados\n"
+            "/adios - Desconectarse del sistema\n"
         )
 
+    if comando == "/adios":
+        return "[ADIOS] Gracias por utilizar el sistema."
+    
     return "Comando no reconocido."
 
 # Comunicación con el cliente
@@ -116,20 +139,25 @@ def manejar_cliente(conn, addr):
     print(f"[NUEVA CONEXIÓN] {addr}.")
 
     # Recibo datos del cliente
-    usuario = conn.recv(1024).decode("utf-8")
-    clave = conn.recv(1024).decode("utf-8")
+    while True:
+        usuario = conn.recv(1024).decode("utf-8")
+        clave = conn.recv(1024).decode("utf-8")
 
-    print(f"Intento de ingreso: {usuario}")
+        print(f"Intento de ingreso: {usuario}")
 
-    # Verifico usuario y contraseña
-    if database.validar_usuario(usuario, clave):
-        conn.send("LOGUEADO".encode("utf-8"))
-        print(f"[INGRESO DE USUARIO] El usuario '{usuario}' ingresó al sistema.")
-    
-    # Si la contraseña o usuario no coinciden / no existen
-    else:
-        conn.send("NO_LOGUEADO".encode("utf-8"))
-        print(f"Error de ingreso: {usuario}")
+        # Verifico usuario y contraseña
+        if database.validar_usuario(usuario, clave):
+            conn.send("LOGUEADO".encode("utf-8"))
+
+            usuarios_conectados.append(usuario) # Agrega usuario
+
+            print(f"[INGRESO DE USUARIO] El usuario '{usuario}' ingresó al sistema.")
+            break
+
+        # Si la contraseña o usuario no coinciden / no existen
+        else:
+            conn.send("NO_LOGUEADO".encode("utf-8"))
+            print(f"Error de ingreso: {usuario}")
 
     # Recibo y envío de mensajes
     try:
@@ -148,13 +176,23 @@ def manejar_cliente(conn, addr):
             if mensaje.startswith("/"):
                 respuesta = procesar_comando(mensaje)
                 conn.send(respuesta.encode("utf-8"))
-                continue
-            conn.send(mensaje.encode("utf-8"))
 
+                if mensaje.lower() == "/adios":
+                    print(f"[DESCONECTADO] {usuario} cerró sesión.")
+                    break
+                continue
+
+            # Mensaje normal
+            conn.send(mensaje.encode("utf-8"))
+                        
     except ConnectionResetError:
         print(f"[DESCONECTADO] {usuario} se ha desconectado abruptamente.")
 
     finally:
+
+        if usuario in usuarios_conectados:
+            usuarios_conectados.remove(usuario)
+
         conn.close()
 
 iniciar_servidor()
