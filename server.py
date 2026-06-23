@@ -5,6 +5,7 @@ import requests
 import datetime
 
 usuarios_conectados = [] # Lista de usuarios que están conectados al sistema
+conexiones = {}
 
 # Inicio del servidor
 def iniciar_servidor():
@@ -19,11 +20,11 @@ def iniciar_servidor():
         conn, addr = server.accept() # Espero la conexión de un cliente
         
         # Creo hilo para el nuevo cliente  
-        hilo = threading.Thread(target=manejar_cliente, args=(conn, addr))
-        hilo.start()
+        hilo_cliente = threading.Thread(target=manejar_cliente, args=(conn, addr))
+        hilo_cliente.start()
 
 # Comandos a utilizar por el cliente
-def procesar_comando(mensaje):
+def procesar_comando(mensaje, usuario):
 
     partes = mensaje.split() # Separa el mensaje del comando
     comando = partes[0] # Primer parte del mensaje
@@ -121,16 +122,30 @@ def procesar_comando(mensaje):
 
     if comando == "/info":
         return (
-            "\nComandos disponibles:"
+            "\nComandos disponibles:\n"
             "/repos usuario — Obtiene repositorios de GitHub\n"
             "/followers usuario - Obtiene followers de GitHub\n"
             "/hora - Muestra la hora actual del servidor\n"
             "/usuarios - Muestra los usuarios conectados\n"
+            "/todos - Envía un mensaje a todos los usuarios conectados\n"
             "/adios - Desconectarse del sistema\n"
         )
 
     if comando == "/adios":
         return "[ADIOS] Gracias por utilizar el sistema."
+    
+    if comando == "/todos":
+        
+        if len(partes) < 2:
+            return "Debe escribir un mensaje. Ej: /todos Hola a todos."
+
+        mensaje_todos = " ".join(partes[1:])
+        
+        for conexion in conexiones.items():
+            try:
+                conexion.send(f"[CHAT GLOBAL] {usuario}: {mensaje_todos}".encode("utf-8"))
+            except:
+                pass
     
     return "Comando no reconocido."
 
@@ -150,6 +165,7 @@ def manejar_cliente(conn, addr):
             conn.send("LOGUEADO".encode("utf-8"))
 
             usuarios_conectados.append(usuario) # Agrega usuario
+            conexiones[usuario] = conn # Conexión
 
             print(f"[INGRESO DE USUARIO] El usuario '{usuario}' ingresó al sistema.")
             break
@@ -174,10 +190,16 @@ def manejar_cliente(conn, addr):
 
             # Si el mensaje es un comando
             if mensaje.startswith("/"):
-                respuesta = procesar_comando(mensaje)
+                respuesta = procesar_comando(mensaje, usuario)
                 conn.send(respuesta.encode("utf-8"))
 
                 if mensaje.lower() == "/adios":
+                    if usuario in usuarios_conectados:
+                        usuarios_conectados.remove(usuario)
+
+                    if usuario in conexiones:
+                        del conexiones[usuario]
+                        
                     print(f"[DESCONECTADO] {usuario} cerró sesión.")
                     break
                 continue
@@ -186,12 +208,14 @@ def manejar_cliente(conn, addr):
             conn.send(mensaje.encode("utf-8"))
                         
     except ConnectionResetError:
-        print(f"[DESCONECTADO] {usuario} se ha desconectado abruptamente.")
-
+        print(f"[DESCONECTADO] {usuario} se ha desconectado.")
+    
     finally:
-
         if usuario in usuarios_conectados:
             usuarios_conectados.remove(usuario)
+
+        if usuario in conexiones:
+            del conexiones[usuario]
 
         conn.close()
 

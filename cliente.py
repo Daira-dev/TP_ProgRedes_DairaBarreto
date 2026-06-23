@@ -1,4 +1,5 @@
 import socket # Red
+import threading
 
 def iniciar_cliente():
     cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Creo el socket
@@ -22,21 +23,41 @@ def iniciar_cliente():
             print("Para ver comandos puedes usar '/info'.\n")
             break
 
+        # Error en el login
         print("\n[ACCESO DENEGADO] Usuario o contraseña incorrectos.\n")
         continue
+
+    # Login terminado --> Hilo que permita recibir mensajes sin input
+    hilo_receptor = threading.Thread(
+        target=recibir_mensajes,
+        args=(cliente,),
+        daemon=True
+    )
+
+    hilo_receptor.start() # Inicio del hilo
 
     # Chat del cliente
     while True:
         mensaje = input("> ")
-
         cliente.send(mensaje.encode("utf-8"))
-        respuesta = cliente.recv(1024).decode("utf-8")
 
-        print(respuesta)
         if mensaje.lower() == "/adios":
             break
 
     cliente.close()
+
+# Función que se queda escuchando mensajes del servidor
+def recibir_mensajes(cliente):
+
+    while True:
+        try:
+            mensaje = cliente.recv(1024).decode("utf-8") # Espera mensaje del servidor
+            if not mensaje:
+                break
+            print(f"{mensaje}") # Muestra el mensaje recibido
+            print("> ", end="", flush=True) # Para finjir el input
+        except:
+            break
 
 if __name__ == "__main__":
     iniciar_cliente()
