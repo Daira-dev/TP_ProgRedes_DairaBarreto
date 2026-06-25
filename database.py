@@ -1,7 +1,9 @@
-import pymysql # Base de datos
+import pymysql # Conexión y ejecución de consultas en MySQL
 
+# ——————————————————————————————————
+
+# Establece y devuelve una conexión a la base de datos
 def conexion_db():
-    # Conexión a la base de datos
     try:
         conexion = pymysql.connect(
             host="localhost",
@@ -15,6 +17,9 @@ def conexion_db():
         print("Error de conexión:", e)
         return None
 
+# ——————————————————————————————————
+
+# Valida si existe un usuario con esa contraseña en la base de datos
 def validar_usuario(usuario, clave):
 
     conexion = conexion_db() # Conexión a la base de datos
@@ -36,6 +41,9 @@ def validar_usuario(usuario, clave):
 
     return resultado is not None # Si encuentra coincidencias retorna True
 
+# ——————————————————————————————————
+
+# Obtiene los repositorios de un usuario
 def obtener_repositorios(usuario):
 
     conexion = conexion_db() # Conexión a la base de datos
@@ -57,6 +65,9 @@ def obtener_repositorios(usuario):
 
     return datos
 
+# ——————————————————————————————————
+
+# Guarda un repositorio en la base de datos
 def guardar_repositorio(usuario, nombre_repo, url_repo):
     
     conexion = conexion_db() # Conexión a la base de datos
@@ -83,6 +94,9 @@ def guardar_repositorio(usuario, nombre_repo, url_repo):
     finally:
         conexion.close()
 
+# ——————————————————————————————————
+
+# Obtiene los seguidores almacenados en la base de datos
 def obtener_followers(usuario):
 
     conexion = conexion_db() # Conexión a la base de datos
@@ -104,6 +118,9 @@ def obtener_followers(usuario):
 
     return datos
 
+# ——————————————————————————————————
+
+# Guarda un follower en la base de datos si no existe
 def guardar_follower(usuario, seguidor, tipo, url_follower):
     
     conexion = conexion_db() # Conexión a la base de datos
@@ -124,7 +141,7 @@ def guardar_follower(usuario, seguidor, tipo, url_follower):
         print(f"[AGREGADO] {usuario} -> {seguidor}.")
 
     except Exception as e:
-        # Si el seguidor ya esta en la tabla
+        # Si el seguidor ya esta en la tabla (evita duplicados)
         print(f"[IGNORADO] {usuario} -> {seguidor}. Error: {e}")
 
     finally:
