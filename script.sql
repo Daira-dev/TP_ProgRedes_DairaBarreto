@@ -31,4 +31,4 @@ url_follower VARCHAR(300)
 INSERT IGNORE INTO usuarios (usuario, clave)
 VALUES
 ('daira', '1234'),
-('profe', '4321');
+('profe', '1234');

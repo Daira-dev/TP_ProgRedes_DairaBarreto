@@ -3,6 +3,7 @@ import threading # Concurrencia — múltiples clientes
 import database # Funciones de acceso y consulta a la bd
 import requests # Consumo de la API de Github
 import datetime # Fecha y hora del sistema
+import os # Variables de entorno (token de GitHub)
 
 # ——————————————————————————————————
 
@@ -32,7 +33,7 @@ def iniciar_servidor():
 # ——————————————————————————————————
 
 # Comandos a utilizar por el cliente
-# Procesa los comandos enviados por el cliente y devuelvela respuesta al servidor
+# Procesa los comandos enviados por el cliente y devuelve la respuesta al servidor
 def procesar_comando(mensaje, usuario):
 
     partes = mensaje.split() # Separa el mensaje del comando por palabras
@@ -52,7 +53,7 @@ def procesar_comando(mensaje, usuario):
 
         # Trae los repositorios de la API de GitHub (del usuario)
         url = f"https://api.github.com/users/{usuario_github}/repos"
-        respuesta = requests.get(url) # Realiza la consulta a la API de GitHub
+        respuesta = requests.get(url, headers=obtener_headers_github()) # Realiza la consulta a la API de GitHub
 
         if respuesta.status_code != 200:
             return "Error consultando GitHub o usuario inexistente."
@@ -95,7 +96,7 @@ def procesar_comando(mensaje, usuario):
 
         # Traigo los seguidores de GitHub
         url = f"https://api.github.com/users/{usuario_github}/followers"
-        respuesta = requests.get(url) # Realiza la consulta a la API de GitHub
+        respuesta = requests.get(url, headers=obtener_headers_github()) # Realiza la consulta a la API de GitHub
 
         if respuesta.status_code != 200:
             return "Error consultando GitHub o usuario inexistente."
@@ -148,7 +149,7 @@ def procesar_comando(mensaje, usuario):
         if error:
             return error
 
-        # Muestra los usuarios conectados
+        # Muestra los usuarios conectados (actualizado)
         return "[USUARIOS CONECTADOS]\n" + formatear_usuarios_conectados()
     
     # ——————
@@ -162,12 +163,13 @@ def procesar_comando(mensaje, usuario):
 
         return (
             "\nComandos disponibles:\n"
-            "/info — Muestra los comandos disponibles."
+            "/info — Muestra los comandos disponibles.\n"
             "/repos usuario — Obtiene repositorios de GitHub.\n"
             "/followers usuario - Obtiene followers de GitHub.\n"
             "/hora - Muestra la hora actual del servidor.\n"
             "/usuarios - Muestra los usuarios conectados.\n"
             "/todos mensaje - Envía un mensaje a todos los usuarios conectados.\n"
+            "/mensaje usuario mensaje - Envía un mensaje privado a un usuario en específico.\n"
             "/adios - Desconectarse del sistema.\n"
         )
 
@@ -197,11 +199,33 @@ def procesar_comando(mensaje, usuario):
         for conexion in conexiones.values():
             try:
                 conexion.send(f"[CHAT GLOBAL] {usuario}: {mensaje_todos}".encode("utf-8"))
-            except:
+            except Exception:
                 pass # Si un cliente falla, no detiene el envío global
 
-        return "Mensaje enviado a todos los usuarios."
+        return "☑ Enviado."
 
+    # ——————
+
+    # /mensaje usuario mensaje
+    if comando == "/mensaje":
+
+        # Evitar mensajes vacíos
+        if len(partes) < 3:
+            return "Debe escribir un destino y un mensaje. Ej:/mensaje daira Hola Dai."
+
+        destino = partes[1] # Usuario destino
+        mensaje_privado = " ".join(partes[2:]).strip() # Mensaje a enviar
+
+        if destino not in conexiones:
+            return "El usuario no existe o no se encuentra conectado."
+        
+        try:
+            conexiones[destino].send(f"[MENSAJE PV] {usuario}: {mensaje_privado}".encode("utf-8"))
+        except:
+            return "No se pudo enviar el mensaje."
+
+        return f"☑ Enviado a {destino}."
+    
     # ——————
 
     # Si no coincide con ningún comando conocido
@@ -210,7 +234,7 @@ def procesar_comando(mensaje, usuario):
 # ——————————————————————————————————
 
 # Comunicación con el cliente
-# Maneja la comunicación individual con cada cliente conectado al servidor
+# Maneja la comunicación de cada cliente conectado al servidor
 def manejar_cliente(conn, addr):
     print(f"[NUEVA CONEXIÓN] {addr}.") # Muestra IP y puerto del cliente como registro al servidor
 
@@ -277,8 +301,7 @@ def manejar_cliente(conn, addr):
         if usuario in usuarios_conectados:
             usuarios_conectados.remove(usuario)
 
-        if usuario in conexiones:
-            del conexiones[usuario]
+        conexiones.pop(usuario, None)
 
         conn.close()
 
@@ -295,15 +318,24 @@ def validar_usuario_github(partes, comando):
 
     return None
 
-# Valida comandos que no deben recibir parámetros (/hora, /usuarios, etc.)
+# Valida comandos que no deben recibir parámetros (/hora, /usuarios, etc..)
 def validar_parametros(partes, comando):
     if len(partes) != 1:
         return f"El comando {comando} no recibe parámetros."
     return None
 
-# Formatea la lista de usuarios conectados para mostrar al cliente
+# Formatea la lista de usuarios conectados para mostrar al cliente actualizada
 def formatear_usuarios_conectados():
     return "\n".join(f"- {u}" for u in usuarios_conectados)
+
+# Token de Github
+def obtener_headers_github():
+    token = os.getenv("GITHUB_TOKEN") # Para autenticar la API de GitHub
+
+    if token:
+        return {"Authorization": f"token {token}"}
+
+    return {}
 
 # ——————————————————————————————————
 

@@ -13,7 +13,7 @@
 - GitHub API
 
 # Instalaciones
-Instalar las dependencias del proyecto:
+Instalar, si es necesario, las dependencias del proyecto:
 ```pip install -r requirements.txt```
 
 # Base de datos
@@ -34,11 +34,12 @@ mysql -u root -p < script.sql
 
 # Ejecución
 Iniciar primero el servidor:
-
 ```python server.py```
 
 Luego iniciar uno o más clientes:
 ```python cliente.py```
+- 'daira', '1234'
+- 'profe', '1234'
 
 # Estructura del proyecto
 ```
@@ -72,3 +73,5 @@ Luego iniciar uno o más clientes:
 - Commit_05 | Comando /hora + /usuarios
 - Commit_06 | Comando /todos y chat concurrente
 - Commit_07 | Agregado de documentación y comentarios
+- Commit 08 | Correcciones README y requirements
+- Commit 09 | Arreglos y Token para GitHub API
