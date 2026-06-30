@@ -31,7 +31,6 @@ def iniciar_cliente():
 
         # Error en el login — Acceso denegado
         print("\n[ACCESO DENEGADO] Usuario o contraseña incorrectos.\n")
-        continue
     
     # ——————
 
@@ -43,11 +42,22 @@ def iniciar_cliente():
     # Loop principal del chat
     # Chat del cliente
     while True:
-        mensaje = input("> ") # Entrada del usuario
-        cliente.send(mensaje.encode("utf-8"))
+        try:
+            mensaje = input("> ") # Entrada del usuario
+            cliente.send(mensaje.encode("utf-8"))
 
-        # Comando de salida del sistema
-        if mensaje.lower() == "/adios":
+            # Comando de salida del sistema
+            if mensaje.lower() == "/adios":
+                print("\n[CERRANDO SESIÓN...]")
+                print("[ADIOS] Gracias por utilizar el sistema.")
+                break
+
+        except ConnectionResetError:
+            print("\n[CONEXIÓN CERRADA POR EL SERVIDOR]")
+            break
+
+        except BrokenPipeError:
+            print("\n[CONEXIÓN PERDIDA]")
             break
 
     cliente.close()
@@ -56,19 +66,20 @@ def iniciar_cliente():
 
 # Función que se queda escuchando mensajes del servidor
 def recibir_mensajes(cliente):
-
     while True:
         try:
             mensaje = cliente.recv(1024).decode("utf-8") # Espera mensaje del servidor
             
             # Si el servidor cierra la conexión
             if not mensaje:
+                print("[DESCONECTADO DEL SERVIDOR]\n")
                 break
 
             print(f"{mensaje}") # Muestra el mensaje recibido
             print("> ", end="", flush=True) # Para finjir el input
         
-        except:
+        except Exception:
+            print("\n[CONEXIÓN CERRADA]")
             break # Desconexiones o errores
 
 # ——————————————————————————————————

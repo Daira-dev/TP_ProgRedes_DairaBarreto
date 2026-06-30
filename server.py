@@ -7,7 +7,6 @@ import os # Variables de entorno (token de GitHub)
 
 # ——————————————————————————————————
 
-usuarios_conectados = [] # Lista de usuarios que están conectados al sistema
 conexiones = {} # Diccionario para el usuario y su conexión (socket)
 
 # ——————————————————————————————————
@@ -54,7 +53,7 @@ def procesar_comando(mensaje, usuario):
         # Trae los repositorios de la API de GitHub (del usuario)
         url = f"https://api.github.com/users/{usuario_github}/repos"
         respuesta = requests.get(url, headers=obtener_headers_github()) # Realiza la consulta a la API de GitHub
-
+        
         if respuesta.status_code != 200:
             return "Error consultando GitHub o usuario inexistente."
 
@@ -177,12 +176,7 @@ def procesar_comando(mensaje, usuario):
 
     # /adios
     if comando == "/adios":
-
-        error = validar_parametros(partes, "/adios")
-        if error:
-            return error
-
-        return "[ADIOS] Gracias por utilizar el sistema."
+        return ""
     
     # ——————
 
@@ -198,10 +192,10 @@ def procesar_comando(mensaje, usuario):
         # Recorre todas las conexiones activas y envía el mensaje a cada cliente
         for conexion in conexiones.values():
             try:
-                conexion.send(f"[CHAT GLOBAL] {usuario}: {mensaje_todos}".encode("utf-8"))
-            except Exception:
-                pass # Si un cliente falla, no detiene el envío global
-
+                conexion.send(f"[MENSAJE GLOBAL] {usuario}: {mensaje_todos}".encode("utf-8"))
+            except Exception as e:
+                print(f"[ERROR DE ENVÍO GLOBAL] {e}")
+                
         return "☑ Enviado."
 
     # ——————
@@ -221,8 +215,8 @@ def procesar_comando(mensaje, usuario):
         
         try:
             conexiones[destino].send(f"[MENSAJE PV] {usuario}: {mensaje_privado}".encode("utf-8"))
-        except:
-            return "No se pudo enviar el mensaje."
+        except Exception:
+            return "Usuario inexistente o desconectado."
 
         return f"☑ Enviado a {destino}."
     
@@ -243,14 +237,23 @@ def manejar_cliente(conn, addr):
     while True: 
         usuario = conn.recv(1024).decode("utf-8")
         clave = conn.recv(1024).decode("utf-8")
-
-        print(f"Intento de ingreso: {usuario}")
-
+        
         # Verifico usuario y contraseña contra la base de datos
         if database.validar_usuario(usuario, clave):
+
+            # Si el usuario ya estaba conectado desde otra sesión
+            if usuario in conexiones:
+                try:
+                    conexiones[usuario].send(
+                        "[AVISO] Se cerró la sesión por inicio en otro dispositivo.".encode("utf-8"))
+                    conexiones[usuario].close()
+                except Exception as e:
+                    print(e)
+
+                conexiones.pop(usuario, None)
+
             conn.send("LOGUEADO".encode("utf-8"))
 
-            usuarios_conectados.append(usuario) # Agrega usuario
             conexiones[usuario] = conn # Diccionario de conexión
 
             print(f"[INGRESO DE USUARIO] El usuario '{usuario}' ingresó al sistema.")
@@ -259,7 +262,6 @@ def manejar_cliente(conn, addr):
         # Si la contraseña o usuario no coinciden / no existen
         else:
             conn.send("NO_LOGUEADO".encode("utf-8"))
-            print(f"Error de ingreso: {usuario}") # Esto es para el sistema
     
     # ——————
 
@@ -279,30 +281,23 @@ def manejar_cliente(conn, addr):
             # Si el mensaje es un comando (empieza con "/")
             if mensaje.startswith("/"):
                 respuesta = procesar_comando(mensaje, usuario)
-                conn.send(respuesta.encode("utf-8"))
-
-                # Manejo especial de desconexión
+                if respuesta:
+                    conn.send(respuesta.encode("utf-8"))
+                
                 if mensaje.lower() == "/adios":
-                    usuarios_conectados.remove(usuario)
-                    del conexiones[usuario]
+                    conexiones.pop(usuario, None)
+                    print(f"[DESCONECTADO] {usuario} se ha desconectado.")
                     break
+                continue
 
-                continue  # no es un mensaje normal
-
-            # Mensaje normal / respuesta simple
-            conn.send(mensaje.encode("utf-8"))
+            conn.send(mensaje.encode("utf-8")) # Mensaje normal
                         
     # Maneja si hay un problema / desconexión inesperada
     except ConnectionResetError:
-        print(f"[DESCONECTADO] {usuario} se ha desconectado.")
+        print(f"[DESCONECTADO] {usuario} se ha desconectado inesperadamente.")
     
-    # Limpieza en la lista de usuario_conectados y conexiones
+    # Limpieza en la lista de conexiones
     finally:
-        if usuario in usuarios_conectados:
-            usuarios_conectados.remove(usuario)
-
-        conexiones.pop(usuario, None)
-
         conn.close()
 
 # ——————————————————————————————————
@@ -324,9 +319,9 @@ def validar_parametros(partes, comando):
         return f"El comando {comando} no recibe parámetros."
     return None
 
-# Formatea la lista de usuarios conectados para mostrar al cliente actualizada
+# Formatea el diccionario de usuarios conectados para mostrar al cliente
 def formatear_usuarios_conectados():
-    return "\n".join(f"- {u}" for u in usuarios_conectados)
+    return "\n".join(f"- {usuario}" for usuario in conexiones.keys())
 
 # Token de Github
 def obtener_headers_github():

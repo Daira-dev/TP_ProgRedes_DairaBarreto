@@ -75,3 +75,4 @@ Luego iniciar uno o más clientes:
 - Commit_07 | Agregado de documentación y comentarios
 - Commit 08 | Correcciones README y requirements
 - Commit 09 | Arreglos y Token para GitHub API
+- Commit 10 | Revisiones y correcciones

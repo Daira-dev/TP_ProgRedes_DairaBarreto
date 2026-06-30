@@ -24,9 +24,9 @@ def validar_usuario(usuario, clave):
 
     conexion = conexion_db() # Conexión a la base de datos
     if conexion is None:
-        return "Error de conexión."
+        return False # Conexión fallida
 
-    cursor = conexion.cursor() # Canal de consulta
+    cursor = conexion.cursor() # Cursor para ejecutar consultas SQL
 
     # Consulta para verificar si el usuario y contraseña existen
     sql = """
@@ -35,7 +35,7 @@ def validar_usuario(usuario, clave):
     """
 
     cursor.execute(sql, (usuario, clave))
-    resultado = cursor.fetchone()
+    resultado = cursor.fetchone() # Devuelve una fila si existe, None si no existe
 
     conexion.close()
 
@@ -48,7 +48,7 @@ def obtener_repositorios(usuario):
 
     conexion = conexion_db() # Conexión a la base de datos
     if conexion is None:
-        return "Error de conexión."
+        return [] # Devuelve el mismo tipo de dato
         
     cursor = conexion.cursor()
 
@@ -72,7 +72,7 @@ def guardar_repositorio(usuario, nombre_repo, url_repo):
     
     conexion = conexion_db() # Conexión a la base de datos
     if conexion is None:
-        return "Error de conexión."
+        return # No devuelve nada
     
     cursor = conexion.cursor()
 
@@ -83,12 +83,12 @@ def guardar_repositorio(usuario, nombre_repo, url_repo):
 
     try:
         cursor.execute(sql, (usuario, nombre_repo, url_repo))
-        conexion.commit()
+        conexion.commit() # Confirma los cambios realizados en la bd
         
         print(f"[REPOSITORIO AGREGADO] {usuario} -> {nombre_repo}.")
 
     except Exception as e:
-        # Si el seguidor ya esta en la tabla
+        # Si el repositorio ya está en la tabla (evita duplicados)
         print(f"[IGNORADO] {usuario} -> {nombre_repo}. Error: {e}")
     
     finally:
@@ -101,7 +101,7 @@ def obtener_followers(usuario):
 
     conexion = conexion_db() # Conexión a la base de datos
     if conexion is None:
-        return "Error de conexión."
+        return []
         
     cursor = conexion.cursor()
 
@@ -125,7 +125,7 @@ def guardar_follower(usuario, seguidor, tipo, url_follower):
     
     conexion = conexion_db() # Conexión a la base de datos
     if conexion is None:
-        return "Error de conexión."
+        return
     
     cursor = conexion.cursor()
 
